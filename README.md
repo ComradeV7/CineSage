@@ -2,7 +2,8 @@
 
 **CineSage** is a full-stack, AI-powered web application designed to provide personalized movie recommendations. It leverages a sophisticated hybrid recommendation engine, combining content-based and collaborative filtering models to deliver relevant and diverse suggestions based on user preferences.
 
-![CineSage Application Screenshot](https://placehold.co/1200x600/2d3748/ffffff?text=CineSage%20App%20Screenshot)
+<img width="1860" height="920" alt="image" src="https://github.com/user-attachments/assets/fc2b7154-9fc7-49d4-a192-21f37b1cb951" />
+
 
 ---
 
@@ -27,8 +28,6 @@ CineSage is built on a modern, decoupled, full-stack architecture. This separati
 * **Backend (Server):** A powerful **Python API** built with **Flask**. Its sole purpose is to serve the machine learning models. It loads the pre-trained model artifacts and exposes a RESTful endpoint to generate recommendations. It is deployed on a service like **Hugging Face Spaces** or **Render**.
 * **Database:** **Firebase Firestore** is used as a NoSQL database to store user data, specifically their list of favorite movies.
 * **Authentication:** **Firebase Authentication** handles all user sign-up and login flows securely.
-
-![Full-stack Architecture Diagram](https://placehold.co/800x300/2d3748/ffffff?text=Frontend%20%E2%86%92%20API%20Call%20%E2%86%92%20Backend%20%E2%86%92%20Firebase)
 
 ---
 
