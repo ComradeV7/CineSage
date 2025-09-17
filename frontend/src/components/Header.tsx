@@ -51,8 +51,8 @@ export const Header = ({ onSearch }: HeaderProps) => {
         ) : (
           <>
             {/* This should be visible ONLY when logged out */}
-            <Link to="/login">Login</Link>
-            <Link to="/signup">Sign Up</Link>
+            <Link to="/login" className="nav-btn foryou-btn">Login</Link>
+            <Link to="/signup" className="nav-btn fav-btn">Sign Up</Link>
           </>
         )}
       </nav>

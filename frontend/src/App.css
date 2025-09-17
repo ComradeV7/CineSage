@@ -398,6 +398,7 @@ h1 {
   cursor: pointer;
   font-weight: 600;
   box-shadow: var(--shadow);
+  text-decoration: none;
 }
 
 .fav-btn {
@@ -406,6 +407,24 @@ h1 {
 
 .foryou-btn {
   background: #4169e1;
+}
+
+.nav-btn:hover,
+.nav-btn:focus {
+  filter: brightness(1.1);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.30);
+  text-decoration: none; /* Ensure underline doesn't appear on hover */
+  outline: none;
+}
+
+.fav-btn:hover,
+.fav-btn:focus {
+  background: linear-gradient(135deg, #ff4b2b, #ff416c);
+}
+
+.foryou-btn:hover,
+.foryou-btn:focus {
+  background: #27408b;
 }
 
 .favorite-btn {
