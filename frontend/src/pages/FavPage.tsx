@@ -2,107 +2,74 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
-import axios from "axios";
-import type { Movie } from "../types";
 import { MovieCard } from "../components/MovieCard";
-
-const TMDB_PROXY_BASE = "https://comradev7-movie-rec-api.hf.space/api/tmdb";
+import type { Movie } from "../types";
+import { useBatchMovies } from "../hooks/useMovies";
 
 export const FavoritesPage = () => {
   const { currentUser } = useAuth();
-  const [favoriteMovies, setFavoriteMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [localFavorites, setLocalFavorites] = useState<Movie[]>([]);
+  const [missingIds, setMissingIds] = useState<number[]>([]);
+  const [loadingFirestore, setLoadingFirestore] = useState(true);
 
+  // 1. Listen to Firestore (Real-time)
   useEffect(() => {
     if (!currentUser) {
-      setFavoriteMovies([]);
-      setLoading(false);
+      setLoadingFirestore(false);
       return;
     }
 
-    const favsCollectionRef = collection(
-      db,
-      "users",
-      currentUser.uid,
-      "favorites"
-    );
+    const unsub = onSnapshot(collection(db, "users", currentUser.uid, "favorites"), (snapshot) => {
+      const docs = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: Number(doc.id),
+          title: data.title,
+          poster_path: data.poster_path,
+          overview: data.overview,
+          release_date: data.release_date,
+          vote_average: data.vote_average
+        } as Movie;
+      });
 
-    // Listen for real-time updates
-    const unsubscribe = onSnapshot(favsCollectionRef, async (snapshot) => {
-      setLoading(true);
-      const favIds = snapshot.docs.map((doc) => doc.id);
-      const favDocs = snapshot.docs.map((doc) => doc.data());
+      setLocalFavorites(docs);
 
-      if (favIds.length === 0) {
-        setFavoriteMovies([]);
-        setLoading(false);
-        return;
+      // Check if any movies have missing data (e.g. only ID is stored)
+      const incomplete = docs.filter(m => !m.title || !m.poster_path).map(m => m.id);
+      if (incomplete.length > 0) {
+        setMissingIds(incomplete);
       }
 
-      try {
-        // Prefer Firestore-stored movie data immediately to avoid network stalls
-        const initialMovies: Movie[] = favDocs.map(
-          (data: any, index: number) => ({
-            id: Number(favIds[index]),
-            title: data?.title || "",
-            poster_path: data?.poster_path || "",
-            overview: data?.overview || "",
-            release_date: data?.release_date || "",
-            vote_average: String(data?.vote_average ?? ""),
-          })
-        );
-        setFavoriteMovies(initialMovies);
-
-        // If any items are missing key fields, fetch details with a short timeout
-        const needFetch = initialMovies.filter(
-          (m) => !m.title || !m.poster_path
-        );
-        if (needFetch.length > 0) {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 7000);
-          const moviePromises = needFetch.map((m) =>
-            axios.get(`${TMDB_PROXY_BASE}/movie/${m.id}`, {
-              signal: controller.signal,
-            })
-          );
-          const movieResponses = await Promise.allSettled(moviePromises);
-          clearTimeout(timeoutId);
-          const byId: Record<number, Movie> = {};
-          for (const m of initialMovies) byId[m.id] = m;
-          movieResponses.forEach((res) => {
-            if (res.status === "fulfilled") {
-              const d = res.value.data;
-              byId[d.id] = {
-                id: d.id,
-                title: d.title,
-                poster_path: d.poster_path || "",
-                overview: d.overview || "",
-                release_date: d.release_date || "",
-                vote_average: String(d.vote_average ?? ""),
-              } as Movie;
-            }
-          });
-          setFavoriteMovies(Object.values(byId));
-        }
-      } catch (e) {
-        setFavoriteMovies([]);
-      } finally {
-        setLoading(false);
-      }
+      setLoadingFirestore(false);
     });
 
-    return () => unsubscribe(); // Cleanup listener on unmount
+    return () => unsub();
   }, [currentUser]);
 
-  if (loading)
+  // 2. Fetch missing data in BATCH (The Improvement)
+  // This automatically runs whenever 'missingIds' is updated
+  const { data: fetchedMovies, isLoading: isLoadingBatch } = useBatchMovies(missingIds);
+
+  // 3. Merge Local + Fetched Data
+  const finalMovies = localFavorites.map(local => {
+    // If this local movie was incomplete, try to find the full version in the batch results
+    if (!local.title || !local.poster_path) {
+      const found = fetchedMovies?.find((m: any) => m.id === local.id);
+      if (found) return found;
+    }
+    return local;
+  });
+
+  if (loadingFirestore || (missingIds.length > 0 && isLoadingBatch)) {
     return <div className="status-message">Loading favorites...</div>;
+  }
 
   return (
     <div className="favorites-page">
       <h1>My Favorites</h1>
-      {favoriteMovies.length > 0 ? (
+      {finalMovies.length > 0 ? (
         <div className="movie-grid">
-          {favoriteMovies.map((movie) => (
+          {finalMovies.map((movie) => (
             <MovieCard key={movie.id} movie={movie} />
           ))}
         </div>

@@ -3,8 +3,6 @@ from flask_cors import CORS
 from services.recommendation_service import RecommenderNet, load_artifacts, get_collaborative_recs, get_content_based_recs
 import torch
 import traceback
-import os
-import requests
 
 # --- 1. Load All Artifacts and Models into Memory ---
 artifacts = load_artifacts()
@@ -18,11 +16,6 @@ collab_model.eval()
 # --- 2. Initialize Flask App ---
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
-
-# --- CONFIGURATION ---
-# Get API Key from Environment Variable (Safe!)
-TMDB_API_KEY = os.environ.get("TMDB_API_KEY") 
-TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
 # --- 3. Define the Main API Endpoint ---
 @app.route('/api/recommendations', methods=['POST'])
@@ -57,107 +50,45 @@ def recommend():
         print("-------------------------")
         return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
 
-# ---mW NEW ROUTE: Movie Details Proxy ---
-        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
-
-# ---mW NEW ROUTE: Movie Details Proxy ---
-@app.route('/api/tmdb/movie/<int:movie_id>', methods=['GET'])
-def get_movie_details(movie_id):
+# --- NEW ROUTE: Batch Movie Fetch ---
+@app.route('/api/movies/batch', methods=['POST'])
+def get_movies_batch():
+    # Ensure API Key is available
     if not TMDB_API_KEY:
         return jsonify({"error": "Server configuration error: API Key missing"}), 500
-
-    try:
-        # 1. Construct the TMDB URL server-side
-        url = f"{TMDB_BASE_URL}/movie/{movie_id}"
         
-        # 2. Add params (api_key is added here, hidden from client)
-        params = {
-            "api_key": TMDB_API_KEY,
-            "language": "en-US"
-        }
+    data = request.get_json()
+    movie_ids = data.get('movie_ids', [])
+    
+    # Validation
+    if not movie_ids or not isinstance(movie_ids, list):
+        return jsonify({"error": "Invalid request. 'movie_ids' must be a list."}), 400
 
-        # 3. Fetch from TMDB
-        response = requests.get(url, params=params)
-        
-        # 4. Handle TMDB errors (e.g., 404 movie not found)
-        if response.status_code != 200:
-            return jsonify({"error": "Failed to fetch data from TMDB"}), response.status_code
+    # Limit batch size to prevent timeouts (e.g., max 20 at a time)
+    # The frontend can handle pagination or chunks if needed
+    if len(movie_ids) > 20: 
+        movie_ids = movie_ids[:20]
 
-        # 5. Return the JSON directly to your frontend
-        return jsonify(response.json())
-
-    except Exception as e:
-        print(f"Error fetching movie {movie_id}: {str(e)}")
-        return jsonify({"error": "Internal Proxy Error"}), 500
-
-# --- NEW ROUTE: Trending Movies Proxy ---
-@app.route('/api/tmdb/trending/movie/week', methods=['GET'])
-def get_trending_movies():
-    if not TMDB_API_KEY:
-        return jsonify({"error": "Server configuration error: API Key missing"}), 500
-
-    try:
-        url = f"{TMDB_BASE_URL}/trending/movie/week"
-        params = {
-            "api_key": TMDB_API_KEY,
-            "language": "en-US"
-        }
-        response = requests.get(url, params=params)
-        if response.status_code != 200:
-            return jsonify({"error": "Failed to fetch trending data"}), response.status_code
-        return jsonify(response.json())
-    except Exception as e:
-        print(f"Error fetching trending: {str(e)}")
-        return jsonify({"error": "Internal Proxy Error"}), 500
-
-# --- NEW ROUTE: Popular Movies Proxy ---
-@app.route('/api/tmdb/movie/popular', methods=['GET'])
-def get_popular_movies():
-    if not TMDB_API_KEY:
-        return jsonify({"error": "Server configuration error: API Key missing"}), 500
-
-    try:
-        url = f"{TMDB_BASE_URL}/movie/popular"
-        page = request.args.get('page', 1)
-        params = {
-            "api_key": TMDB_API_KEY,
-            "language": "en-US",
-            "page": page
-        }
-        response = requests.get(url, params=params)
-        if response.status_code != 200:
-            return jsonify({"error": "Failed to fetch popular movies"}), response.status_code
-        return jsonify(response.json())
-    except Exception as e:
-        print(f"Error fetching popular movies: {str(e)}")
-        return jsonify({"error": "Internal Proxy Error"}), 500
-
-# --- NEW ROUTE: Search Movies Proxy ---
-@app.route('/api/tmdb/search/movie', methods=['GET'])
-def search_movies():
-    if not TMDB_API_KEY:
-        return jsonify({"error": "Server configuration error: API Key missing"}), 500
-
-    try:
-        url = f"{TMDB_BASE_URL}/search/movie"
-        query = request.args.get('query', '')
-        page = request.args.get('page', 1)
-        if not query:
-             return jsonify({"error": "Query parameter is required"}), 400
-
-        params = {
-            "api_key": TMDB_API_KEY,
-            "language": "en-US",
-            "query": query,
-            "page": page
-        }
-        response = requests.get(url, params=params)
-        if response.status_code != 200:
-            return jsonify({"error": "Failed to search movies"}), response.status_code
-        return jsonify(response.json())
-    except Exception as e:
-        print(f"Error searching movies: {str(e)}")
-        return jsonify({"error": "Internal Proxy Error"}), 500
+    results = []
+    
+    # Use a session for connection pooling (faster than individual requests)
+    with requests.Session() as session:
+        for mid in movie_ids:
+            try:
+                # We reuse the same logic as the single movie route
+                url = f"{TMDB_BASE_URL}/movie/{mid}"
+                params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+                
+                resp = session.get(url, params=params, timeout=3)
+                if resp.status_code == 200:
+                    results.append(resp.json())
+                else:
+                    print(f"Failed to fetch movie {mid}: Status {resp.status_code}")
+            except Exception as e:
+                print(f"Error fetching movie {mid}: {e}")
+                continue
+                
+    return jsonify(results)
 
 # --- 4. Run the App ---
 if __name__ == '__main__':
