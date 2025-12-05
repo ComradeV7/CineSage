@@ -110,6 +110,55 @@ def get_trending_movies():
         print(f"Error fetching trending: {str(e)}")
         return jsonify({"error": "Internal Proxy Error"}), 500
 
+# --- NEW ROUTE: Popular Movies Proxy ---
+@app.route('/api/tmdb/movie/popular', methods=['GET'])
+def get_popular_movies():
+    if not TMDB_API_KEY:
+        return jsonify({"error": "Server configuration error: API Key missing"}), 500
+
+    try:
+        url = f"{TMDB_BASE_URL}/movie/popular"
+        page = request.args.get('page', 1)
+        params = {
+            "api_key": TMDB_API_KEY,
+            "language": "en-US",
+            "page": page
+        }
+        response = requests.get(url, params=params)
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to fetch popular movies"}), response.status_code
+        return jsonify(response.json())
+    except Exception as e:
+        print(f"Error fetching popular movies: {str(e)}")
+        return jsonify({"error": "Internal Proxy Error"}), 500
+
+# --- NEW ROUTE: Search Movies Proxy ---
+@app.route('/api/tmdb/search/movie', methods=['GET'])
+def search_movies():
+    if not TMDB_API_KEY:
+        return jsonify({"error": "Server configuration error: API Key missing"}), 500
+
+    try:
+        url = f"{TMDB_BASE_URL}/search/movie"
+        query = request.args.get('query', '')
+        page = request.args.get('page', 1)
+        if not query:
+             return jsonify({"error": "Query parameter is required"}), 400
+
+        params = {
+            "api_key": TMDB_API_KEY,
+            "language": "en-US",
+            "query": query,
+            "page": page
+        }
+        response = requests.get(url, params=params)
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to search movies"}), response.status_code
+        return jsonify(response.json())
+    except Exception as e:
+        print(f"Error searching movies: {str(e)}")
+        return jsonify({"error": "Internal Proxy Error"}), 500
+
 # --- 4. Run the App ---
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
