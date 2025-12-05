@@ -8,7 +8,10 @@ import type { MovieDetails } from "../types";
 
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
-const API_KEY = import.meta.env.VITE_API_KEY;
+// Update 1: Define your backend base URL (Centralize this later!)
+// If developing locally, this might be http://localhost:5001/api
+// In production, it's your Hugging Face URL.
+const BACKEND_API_BASE = "https://comradev7-movie-rec-api.hf.space/api";
 
 export const MovieDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,7 +43,10 @@ export const MovieDetailPage = () => {
     const fetchMovieDetails = async () => {
       try {
         setLoading(true);
-        const API_URL = `https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}&language=en-US`;
+        // Update 2: Change the URL to point to YOUR backend
+        // OLD: `https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}...`
+        // NEW:
+        const API_URL = `${BACKEND_API_BASE}/movie/${id}`;
         const response = await axios.get<MovieDetails>(API_URL);
         setMovie(response.data);
         setError(null);

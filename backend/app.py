@@ -3,6 +3,8 @@ from flask_cors import CORS
 from services.recommendation_service import RecommenderNet, load_artifacts, get_collaborative_recs, get_content_based_recs
 import torch
 import traceback
+import os
+import requests
 
 # --- 1. Load All Artifacts and Models into Memory ---
 artifacts = load_artifacts()
@@ -16,6 +18,11 @@ collab_model.eval()
 # --- 2. Initialize Flask App ---
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes
+
+# --- CONFIGURATION ---
+# Get API Key from Environment Variable (Safe!)
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY") 
+TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
 # --- 3. Define the Main API Endpoint ---
 @app.route('/api/recommendations', methods=['POST'])
@@ -49,6 +56,36 @@ def recommend():
         print(traceback.format_exc()) # This prints the full error traceback
         print("-------------------------")
         return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+
+# ---mW NEW ROUTE: Movie Details Proxy ---
+@app.route('/api/movie/<int:movie_id>', methods=['GET'])
+def get_movie_details(movie_id):
+    if not TMDB_API_KEY:
+        return jsonify({"error": "Server configuration error: API Key missing"}), 500
+
+    try:
+        # 1. Construct the TMDB URL server-side
+        url = f"{TMDB_BASE_URL}/movie/{movie_id}"
+        
+        # 2. Add params (api_key is added here, hidden from client)
+        params = {
+            "api_key": TMDB_API_KEY,
+            "language": "en-US"
+        }
+
+        # 3. Fetch from TMDB
+        response = requests.get(url, params=params)
+        
+        # 4. Handle TMDB errors (e.g., 404 movie not found)
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to fetch data from TMDB"}), response.status_code
+
+        # 5. Return the JSON directly to your frontend
+        return jsonify(response.json())
+
+    except Exception as e:
+        print(f"Error fetching movie {movie_id}: {str(e)}")
+        return jsonify({"error": "Internal Proxy Error"}), 500
 
 # --- 4. Run the App ---
 if __name__ == '__main__':
