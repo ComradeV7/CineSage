@@ -46,7 +46,7 @@ export const MovieDetailPage = () => {
         // Update 2: Change the URL to point to YOUR backend
         // OLD: `https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}...`
         // NEW:
-        const API_URL = `${BACKEND_API_BASE}/movie/${id}`;
+        const API_URL = `${BACKEND_API_BASE}/tmdb/movie/${id}`;
         const response = await axios.get<MovieDetails>(API_URL);
         setMovie(response.data);
         setError(null);
@@ -78,33 +78,33 @@ export const MovieDetailPage = () => {
       <Link to="/" className="back-link">Back to Home</Link>
       <div className="detail-container">
         <div className="poster">
-            <img
+          <img
             src={`${IMAGE_BASE_URL}${movie.poster_path}`}
             alt={movie.title}
             onError={(e) => { e.currentTarget.src = 'https://placehold.co/500x750/333/FFF?text=No+Image'; }}
-            />
+          />
         </div>
         <div className="info">
-            <h1>{movie.title}</h1>
-            {currentUser && (
-                <button onClick={handleFavorite} className="favorite-btn">
-                    {favoriteIds.has(movie.id) ? '❤️ Remove from Favorites' : '🤍 Add to Favorites'}
-                </button>
-            )}
-            {movie.tagline && <p className="tagline"><em>"{movie.tagline}"</em></p>}
-            <div className="meta-info">
-                <span>{movie.release_date}</span>
-                <span>•</span>
-                <span>{movie.runtime} min</span>
-            </div>
-            <div className="genres">
-                {movie.genres.map(genre => <span key={genre.id} className="genre-tag">{genre.name}</span>)}
-            </div>
-            <h3>Overview</h3>
-            <p>{movie.overview}</p>
-            <div className="rating">
-                Rating: {Number(movie.vote_average).toFixed(1)} / 10
-            </div>
+          <h1>{movie.title}</h1>
+          {currentUser && (
+            <button onClick={handleFavorite} className="favorite-btn">
+              {favoriteIds.has(movie.id) ? '❤️ Remove from Favorites' : '🤍 Add to Favorites'}
+            </button>
+          )}
+          {movie.tagline && <p className="tagline"><em>"{movie.tagline}"</em></p>}
+          <div className="meta-info">
+            <span>{movie.release_date}</span>
+            <span>•</span>
+            <span>{movie.runtime} min</span>
+          </div>
+          <div className="genres">
+            {movie.genres.map(genre => <span key={genre.id} className="genre-tag">{genre.name}</span>)}
+          </div>
+          <h3>Overview</h3>
+          <p>{movie.overview}</p>
+          <div className="rating">
+            Rating: {Number(movie.vote_average).toFixed(1)} / 10
+          </div>
         </div>
       </div>
     </div>

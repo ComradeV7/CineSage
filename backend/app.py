@@ -58,7 +58,10 @@ def recommend():
         return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
 
 # ---mW NEW ROUTE: Movie Details Proxy ---
-@app.route('/api/movie/<int:movie_id>', methods=['GET'])
+        return jsonify({"error": "An internal server error occurred", "details": str(e)}), 500
+
+# ---mW NEW ROUTE: Movie Details Proxy ---
+@app.route('/api/tmdb/movie/<int:movie_id>', methods=['GET'])
 def get_movie_details(movie_id):
     if not TMDB_API_KEY:
         return jsonify({"error": "Server configuration error: API Key missing"}), 500
@@ -85,6 +88,26 @@ def get_movie_details(movie_id):
 
     except Exception as e:
         print(f"Error fetching movie {movie_id}: {str(e)}")
+        return jsonify({"error": "Internal Proxy Error"}), 500
+
+# --- NEW ROUTE: Trending Movies Proxy ---
+@app.route('/api/tmdb/trending/movie/week', methods=['GET'])
+def get_trending_movies():
+    if not TMDB_API_KEY:
+        return jsonify({"error": "Server configuration error: API Key missing"}), 500
+
+    try:
+        url = f"{TMDB_BASE_URL}/trending/movie/week"
+        params = {
+            "api_key": TMDB_API_KEY,
+            "language": "en-US"
+        }
+        response = requests.get(url, params=params)
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to fetch trending data"}), response.status_code
+        return jsonify(response.json())
+    except Exception as e:
+        print(f"Error fetching trending: {str(e)}")
         return jsonify({"error": "Internal Proxy Error"}), 500
 
 # --- 4. Run the App ---
