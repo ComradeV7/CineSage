@@ -3,6 +3,11 @@ from flask_cors import CORS
 from services.recommendation_service import RecommenderNet, load_artifacts, get_collaborative_recs, get_content_based_recs
 import torch
 import traceback
+import requests
+import os
+
+TMDB_API_KEY = os.getenv('TMDB_API_KEY')
+TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
 # --- 1. Load All Artifacts and Models into Memory ---
 artifacts = load_artifacts()

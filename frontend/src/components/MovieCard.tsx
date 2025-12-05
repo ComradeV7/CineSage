@@ -8,15 +8,15 @@ type MovieCardProps = {
     movie: Movie;
 };
 
-export const MovieCard = ({ movie } : MovieCardProps) => {
+export const MovieCard = ({ movie }: MovieCardProps) => {
 
-    const imageUrl = movie.poster_path 
-    ? `${IMAGE_BASE_URL}${movie.poster_path}` 
-    : PLACEHOLDER_IMAGE;
+    const imageUrl = movie.poster_path
+        ? `${IMAGE_BASE_URL}${movie.poster_path}`
+        : PLACEHOLDER_IMAGE;
 
     return (
         <Link to={`/movie/${movie.id}`} className="movie-card">
-            <img 
+            <img
                 src={imageUrl}
                 alt={movie.title}
                 onError={(e) => {
@@ -25,7 +25,7 @@ export const MovieCard = ({ movie } : MovieCardProps) => {
             />
             <div className="movie-info">
                 <h3>{movie.title}</h3>
-                <span>{movie.release_date.substring(0, 4)}</span>
+                <span>{movie.release_date ? movie.release_date.substring(0, 4) : 'N/A'}</span>
             </div>
         </Link>
 
